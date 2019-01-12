@@ -40,42 +40,18 @@ def get_report(analytics, start_date, end_date = 'today'):
         }]
       }
   ).execute()
-  
 
-def print_response(response):
-  """Parses and prints the Analytics Reporting API V4 response.
-  Args: 
-	response: An Analytics Reporting API V4 response.
-  """
-
-  for report in response.get('reports', []):
-    columnHeader = report.get('columnHeader', {})
-    dimensionHeaders = columnHeader.get('dimensions', [])
-    metricHeaders = columnHeader.get('metricHeader', {}).get('metricHeaderEntries', [])
-
-    for row in report.get('data', {}).get('rows', []):
-      dimensions = row.get('dimensions', [])
-      dateRangeValues = row.get('metrics', [])
-
-      for header, dimension in zip(dimensionHeaders, dimensions):
-        print(header + ': ' + dimension)
-
-      for i, values in enumerate(dateRangeValues):
-        print('Date range: ' + str(i))
-        for metricHeader, value in zip(metricHeaders, values.get('values')):
-          print(metricHeader.get('name') + ': ' + value)
-
-def save_response(response, users_filename, items_filename, ratings_filename):
+def save_response(response, users_path, items_path, ratings_path):
   """ Creater three tables for users, items and ratings, from ga api response
   Args:	
 		response: An Analytics Reporting API V4 Response of user Timing
-		user_filename: output file name for users
-		item_filename: output file name for items
-		ratings_filename: output file name for user-item ratings
+		user_path: output file name for users
+		item_path: output file name for items
+		ratings_path: output file name for user-item ratings
   """
-  ratings_file = open(ratings_filename, 'w')
-  users_file = open(users_filename, 'w')
-  items_file = open(items_filename, 'w')
+  ratings_file = open(ratings_path, 'w')
+  users_file = open(users_path, 'w')
+  items_file = open(items_path, 'w')
   
 
   for report in response.get('reports', []):
@@ -121,16 +97,16 @@ def save_response(response, users_filename, items_filename, ratings_filename):
   items_file.close()
 
 
-def create_predictions(ratings_filename):
+def create_predictions(ratings_path):
   """ Creates user based and item based predicitons based on collaborative filtering method
     Args:	
-		ratings_filename: output file name for user-item ratings
+		ratings_path: output file name for user-item ratings
 	Returns:
 		user based predictions list
 		item based prediciotns list
   """ 
   r_cols = ['user_id', 'item_id', 'rating']
-  ratings = pd.read_csv(ratings_filename, sep=',', names=r_cols,encoding='latin-1')
+  ratings = pd.read_csv(ratings_path, sep=',', names=r_cols,encoding='latin-1')
   
   print(ratings.sort_values('user_id'))  
   
@@ -184,9 +160,9 @@ def best_predictions(prediction, k = 5):
 
   return best_predictions
 
-def most_popular_products(ratings_filename, k = 10):
+def most_popular_products(ratings_path, k = 10):
   r_cols = ['user_id', 'item_id', 'rating']
-  ratings = pd.read_csv(ratings_filename, sep=',', names=r_cols,encoding='utf-8')
+  ratings = pd.read_csv(ratings_path, sep=',', names=r_cols,encoding='utf-8')
  
   sum_by_items = ratings.groupby('item_id', as_index=False).agg('sum')
 
@@ -195,13 +171,13 @@ def most_popular_products(ratings_filename, k = 10):
   return k_largest_ratings['item_id'].tolist()	
 
   
-def save_most_popular(most_popular_filename, most_popular_array): 
-  with open(most_popular_filename, 'w') as output:
+def save_most_popular(most_popular_path, most_popular_array): 
+  with open(most_popular_path, 'w') as output:
     output.write(''.join(str(i) + ' ' for i in most_popular_array)) 
 
-def save_predictions(predictions, output_filename, users_filename):
+def save_predictions(predictions, output_path, users_path):
 
-  with open(output_filename, 'w') as output, open(users_filename, 'r') as users_file:
+  with open(output_path, 'w') as output, open(users_path, 'r') as users_file:
     reader = csv.reader(users_file)
     users = list(reader)
     users_id_counter = 0
@@ -214,32 +190,32 @@ def save_predictions(predictions, output_filename, users_filename):
 def main():
   start_date = '2019-01-12'
 
-  users_filename = 'output/users.data'
-  items_filename = 'output/items.data'
-  ratings_filename = 'output/ratings.data'
+  users_path = 'output/users.data'
+  items_path = 'output/items.data'
+  ratings_path = 'output/ratings.data'
 
-  user_based_predictions_filename = 'output/user_based_predictions.txt'
-  item_based_predictions_filename = 'output/item_based_predictions.txt'
-  most_popular_products_filename = 'output/most_popular.txt'
+  user_based_predictions_path = 'output/user_based_predictions.txt'
+  item_based_predictions_path = 'output/item_based_predictions.txt'
+  most_popular_products_path = 'output/most_popular.txt'
 
   analytics = initialize_analyticsreporting()
   response = get_report(analytics, start_date)
    
   
-  save_response(response, users_filename, items_filename, ratings_filename)
+  save_response(response, users_path, items_path, ratings_path)
   
   
 
-  user_based_predictions, item_based_predictions = create_predictions(ratings_filename)
+  user_based_predictions, item_based_predictions = create_predictions(ratings_path)
 
   best_user_predictions = best_predictions(user_based_predictions)
   best_item_predictions = best_predictions(item_based_predictions)
   
-  most_popular_products_array = most_popular_products(ratings_filename)
+  most_popular_products_array = most_popular_products(ratings_path)
   
-  save_predictions(best_user_predictions, user_based_predictions_filename, users_filename)
-  save_predictions(best_item_predictions, item_based_predictions_filename, users_filename)
-  save_most_popular(most_popular_products_filename, most_popular_products_array)
+  save_predictions(best_user_predictions, user_based_predictions_path, users_path)
+  save_predictions(best_item_predictions, item_based_predictions_path, users_path)
+  save_most_popular(most_popular_products_path, most_popular_products_array)
 
 if __name__ == '__main__':
   main()
